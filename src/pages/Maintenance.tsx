@@ -1,10 +1,19 @@
 import React from 'react';
 import styled from '@emotion/styled';
+import Header from '../components/Header';
 
 const Container = styled.div`
-  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+`;
+
+const Content = styled.div`
+  padding: 2rem;
+  width: 90%;
   max-width: 1200px;
-  margin: 0 auto;
+  margin-top: 2rem;
 `;
 
 const Title = styled.h1`
@@ -24,11 +33,15 @@ const StatusCard = styled.div`
 const Maintenance: React.FC = () => {
   return (
     <Container>
-      <Title>Maintenance</Title>
-      <StatusCard>
-        <h2>System Status</h2>
-        <p>All systems are operational</p>
-      </StatusCard>
+      <Header />
+      <Content>
+        <Title>Maintenance</Title>
+        <p>System maintenance and configuration options.</p>
+        <StatusCard>
+          <h2>System Status</h2>
+          <p>All systems are operational</p>
+        </StatusCard>
+      </Content>
     </Container>
   );
 };

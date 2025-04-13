@@ -1,10 +1,19 @@
 import React from 'react';
 import styled from '@emotion/styled';
+import Header from '../components/Header';
 
 const Container = styled.div`
-  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+`;
+
+const Content = styled.div`
+  padding: 2rem;
+  width: 90%;
   max-width: 1200px;
-  margin: 0 auto;
+  margin-top: 2rem;
 `;
 
 const Title = styled.h1`
@@ -32,10 +41,14 @@ const UploadArea = styled.div`
 const MediaUpload: React.FC = () => {
   return (
     <Container>
-      <Title>Media Upload</Title>
-      <UploadArea>
-        <p>Click or drag files here to upload</p>
-      </UploadArea>
+      <Header />
+      <Content>
+        <Title>Media Upload</Title>
+        <p>Upload your media files here.</p>
+        <UploadArea>
+          <p>Click or drag files here to upload</p>
+        </UploadArea>
+      </Content>
     </Container>
   );
 };
