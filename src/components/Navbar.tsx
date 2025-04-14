@@ -54,6 +54,10 @@ const MenuItem = styled(Link)`
 const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
 
+  const handleMenuItemClick = () => {
+    setIsOpen(false);
+  };
+
   return (
     <NavContainer>
       <MenuButton onClick={() => setIsOpen(!isOpen)}>
@@ -62,9 +66,9 @@ const Navbar: React.FC = () => {
         <Line />
       </MenuButton>
       <Menu isOpen={isOpen}>
-        <MenuItem to="/">Dashboard</MenuItem>
-        <MenuItem to="/media">Media Upload</MenuItem>
-        <MenuItem to="/maintenance">Maintenance</MenuItem>
+        <MenuItem to="/" onClick={handleMenuItemClick}>Dashboard</MenuItem>
+        <MenuItem to="/media" onClick={handleMenuItemClick}>Media Upload</MenuItem>
+        <MenuItem to="/maintenance" onClick={handleMenuItemClick}>Maintenance</MenuItem>
       </Menu>
     </NavContainer>
   );
