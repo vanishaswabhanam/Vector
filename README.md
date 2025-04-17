@@ -1,10 +1,46 @@
-# Vector - Tower Classification Application
+# Vector Cell Tower Classifier
 
-This application provides tower classification capabilities using a pre-trained PyTorch model. The system can classify tower images into four categories:
-- Guyed
-- Lattice
-- Monopole
-- Water Tank
+This repository contains a web application for classifying cell tower types and detecting antennas using deep learning models.
+
+## Setup Instructions
+
+1. Clone this repository
+2. Install dependencies:
+   ```
+   npm install
+   cd server && npm install
+   ```
+3. Set up model files (not included in the repository due to GitHub size limits):
+   
+   You need to download the following model files and place them in the correct locations:
+   
+   - `tower_classifier.pth` - Place in the root directory of the project
+   - `UTD-Models-Videos/weights/yolov3.weights` - Place in the UTD-Models-Videos/weights directory
+
+4. Start the backend server:
+   ```
+   cd server && node server.js
+   ```
+5. Start the frontend application:
+   ```
+   npm start
+   ```
+
+## Features
+
+- Tower Classification: Identifies the type of cell tower from images (monopole, lattice, guyed, water tank)
+- Modern UI with React and styled components
+- Real-time analysis of uploaded images
+- Image processing with PyTorch models
+
+## Note about Large Files
+
+The model files are not included in this repository due to GitHub's file size limitations (100MB max per file). The necessary files are:
+
+- `tower_classifier.pth` (196MB)
+- `UTD-Models-Videos/weights/yolov3.weights` (236MB)
+
+These files need to be obtained separately and placed in the appropriate directories for the application to function correctly.
 
 ## Prerequisites
 
