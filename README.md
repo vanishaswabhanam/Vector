@@ -1,46 +1,80 @@
-# Getting Started with Create React App
+# Vector - Tower Classification Application
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This application provides tower classification capabilities using a pre-trained PyTorch model. The system can classify tower images into four categories:
+- Guyed
+- Lattice
+- Monopole
+- Water Tank
 
-## Available Scripts
+## Prerequisites
 
-In the project directory, you can run:
+Before running the application, ensure you have the following installed:
+- Node.js (v14 or higher)
+- Python 3.7+
+- PyTorch
+- Torchvision
+- Pillow
 
-### `npm start`
+## Python Dependencies
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+Install required Python packages:
+```bash
+pip install torch torchvision pillow
+```
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Project Structure
 
-### `npm test`
+- `src/` - React frontend application
+- `server/` - Backend Express server with Python model integration
+- `tower_classifier.pth` - Pre-trained PyTorch model for tower classification
+- `training_data copy/` - Training data samples for reference
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Running the Application
 
-### `npm run build`
+### Step 1: Start the Backend Server
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```bash
+cd server
+node server.js
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+The server will run on port 3001.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Step 2: Start the Frontend
 
-### `npm run eject`
+In a separate terminal:
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+```bash
+npm start
+```
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+The React application will run on port 3000.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+## Using the Tower Classifier
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+1. Navigate to the "Media Upload" page from the menu
+2. Drag and drop or click to upload an image of a tower
+3. The system will automatically process the image
+4. View the classification result showing the tower type and confidence score
 
-## Learn More
+## Tech Stack
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- Frontend: React, TypeScript, Emotion (styled components)
+- Backend: Express.js, Node.js
+- ML: PyTorch (Python)
+- Data Transfer: Axios, FormData, Multer
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Supported Image Formats
+
+The classifier supports the following image formats:
+- JPEG/JPG
+- PNG
+- GIF
+
+## Model Architecture
+
+The tower classifier uses a convolutional neural network (CNN) with:
+- 3 convolutional layers
+- Max pooling
+- Dropout for regularization
+- Fully connected layers for classification

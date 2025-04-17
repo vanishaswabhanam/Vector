@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 5
+names: ['GSM Antenna', 'Microwave Antenna', 'antenna','Lattice Tower', 'M Type Tower']
+
+roboflow:
+  workspace: cell-tower-data-set
+  project: tower-detection-tff1p-tpb6f
+  version: 1
+  license: CC BY 4.0
+  url: https://app.roboflow.com/cell-tower-data-set/tower-detection-tff1p-tpb6f/1
