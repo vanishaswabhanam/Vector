@@ -69,3 +69,6 @@ yarn-error.log*
 .vscode/
 *.swp
 *.swo
+
+# PyTorch model files
+tower_classifier.pth

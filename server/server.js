@@ -123,7 +123,7 @@ app.post('/api/analyze', upload.single('image'), (req, res) => {
   console.log(`Image path: ${imagePath}`);
 
   // Run Python script to classify the image
-  const python = spawn('python', [
+  const python = spawn('python3', [
     path.join(__dirname, 'model.py'),
     imagePath,
     modelPath
@@ -237,7 +237,7 @@ app.post('/api/classify', upload.single('image'), (req, res) => {
   console.log(`Image path: ${imagePath}`);
 
   // Run Python script to classify the image
-  const python = spawn('python', [
+  const python = spawn('python3', [
     path.join(__dirname, 'model.py'),
     imagePath,
     modelPath

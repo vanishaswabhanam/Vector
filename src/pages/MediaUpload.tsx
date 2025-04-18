@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled from '@emotion/styled';
 import Header from '../components/Header';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
+import TowerModel from '../components/TowerModel';
 
 const Container = styled.div`
   display: flex;
@@ -10,11 +11,43 @@ const Container = styled.div`
   min-height: 100vh;
 `;
 
-const Content = styled.div`
+const SplitLayout = styled.div<{ hasImage: boolean }>`
+  display: flex;
+  width: 100%;
   padding: 2rem;
-  width: 90%;
-  max-width: 1200px;
-  margin-top: 2rem;
+  gap: 2rem;
+  transition: all 0.3s ease-in-out;
+`;
+
+const UploadSection = styled.div<{ hasImage: boolean }>`
+  width: ${props => props.hasImage ? '50%' : '90%'};
+  max-width: ${props => props.hasImage ? 'none' : '1200px'};
+  margin: ${props => props.hasImage ? '0' : '0 auto'};
+  transition: all 0.3s ease-in-out;
+`;
+
+const ModelSection = styled.div<{ isVisible: boolean }>`
+  width: 50%;
+  height: calc(100vh - 120px);
+  opacity: ${props => props.isVisible ? 1 : 0};
+  transform: translateX(${props => props.isVisible ? '0' : '100px'});
+  transition: all 0.3s ease-in-out;
+  position: ${props => props.isVisible ? 'relative' : 'absolute'};
+  right: ${props => props.isVisible ? '0' : '-100%'};
+  display: flex;
+  flex-direction: column;
+`;
+
+const ModelContainer = styled.div`
+  flex: 1;
+  min-height: 600px;
+  position: relative;
+`;
+
+const ModelTitle = styled.h2`
+  color: #333;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
 `;
 
 const Title = styled.h1`
@@ -274,6 +307,10 @@ interface ImageSize {
   height: number;
 }
 
+interface AnalysisError {
+  message: string;
+}
+
 interface AnalysisResponse {
   success: boolean;
   towerClassification?: {
@@ -283,11 +320,10 @@ interface AnalysisResponse {
     detections: Detection[];
     image_size: ImageSize;
   } | null;
-  errors?: Array<{
-    source: string;
-    message: string;
-  }>;
+  errors?: AnalysisError[];
   error?: string;
+  data?: any;
+  details?: string;
 }
 
 const MediaUpload: React.FC = () => {
@@ -296,12 +332,13 @@ const MediaUpload: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [errorDetails, setErrorDetails] = useState<string | null>(null);
-  const [serverOnline, setServerOnline] = useState<boolean | null>(null);
+  const [error, setError] = useState<string>('');
+  const [errorDetails, setErrorDetails] = useState<string>('');
+  const [serverOnline, setServerOnline] = useState<boolean>(true);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
   const [showBoundingBoxes, setShowBoundingBoxes] = useState(true);
   const [imageContainerSize, setImageContainerSize] = useState<{width: number, height: number}>({width: 0, height: 0});
+  const [showModel, setShowModel] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -354,8 +391,9 @@ const MediaUpload: React.FC = () => {
       setFile(selectedFile);
       setPreview(URL.createObjectURL(selectedFile));
       setAnalysisResult(null);
-      setError(null);
-      setErrorDetails(null);
+      setError('');
+      setErrorDetails('');
+      setShowModel(true);
       
       // Only submit if server is online
       if (serverOnline) {
@@ -376,8 +414,8 @@ const MediaUpload: React.FC = () => {
     
     setIsLoading(true);
     setAnalysisResult(null);
-    setError(null);
-    setErrorDetails(null);
+    setError('');
+    setErrorDetails('');
     
     const formData = new FormData();
     formData.append('image', selectedFile);
@@ -397,13 +435,13 @@ const MediaUpload: React.FC = () => {
       setAnalysisResult(response.data);
       
       if (!response.data.success) {
-        const errorMessages = response.data.errors?.map(e => e.message).join('\n') || response.data.error || 'Analysis failed';
+        const errorMessages = response.data.errors?.map((e: AnalysisError) => e.message).join('\n') || response.data.error || 'Analysis failed';
         setError(errorMessages);
       }
-    } catch (err) {
-      console.error('Error analyzing image:', err);
-      
-      if (axios.isAxiosError(err)) {
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const err = error as AxiosError<AnalysisResponse>;
+        
         if (err.code === 'ECONNABORTED') {
           setError('The analysis request timed out. The models may be taking too long to process.');
         } else if (err.response) {
@@ -411,8 +449,8 @@ const MediaUpload: React.FC = () => {
             setError('Cannot connect to API endpoint. Please ensure the server is running and the /api/analyze endpoint is available.');
             setServerOnline(false);
           } else {
-            setError(`Failed to analyze image: ${err.response.data.error || 'Server error'}`);
-            setErrorDetails(err.response.data.details || JSON.stringify(err.response.data));
+            setError(`Failed to analyze image: ${err.response.data?.error || 'Server error'}`);
+            setErrorDetails(err.response.data?.details || JSON.stringify(err.response.data));
           }
         } else if (err.request) {
           setError('No response from server. Server may be offline or not properly configured for CORS.');
@@ -496,124 +534,134 @@ const MediaUpload: React.FC = () => {
   return (
     <Container>
       <Header />
-      <Content>
-        <Title>Tower Classification & Antenna Detection</Title>
-        <p>Upload an image of a tower to identify its type and detect antennas.</p>
-        
-        <UploadArea 
-          isDragging={isDragging}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={handleClick}
-        >
-          <p>Click or drag files here to upload</p>
-          <input 
-            type="file" 
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            accept="image/*"
-            style={{ display: 'none' }}
-          />
-        </UploadArea>
-        
-        {preview && (
-          <ImageContainer ref={imageContainerRef}>
-            <StyledImage 
-              ref={imageRef} 
-              src={preview} 
-              alt="Uploaded tower" 
-              onLoad={handleImageLoad}
+      <SplitLayout hasImage={!!preview}>
+        <UploadSection hasImage={!!preview}>
+          <Title>Tower Classification & Antenna Detection</Title>
+          <p>Upload an image of a tower to identify its type and detect antennas.</p>
+          
+          <UploadArea 
+            isDragging={isDragging}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={handleClick}
+          >
+            <p>Click or drag files here to upload</p>
+            <input 
+              type="file" 
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/*"
+              style={{ display: 'none' }}
             />
-            
-            {showBoundingBoxes && 
-             analysisResult?.antennaDetection?.detections && 
-             analysisResult.antennaDetection.image_size &&
-             analysisResult.antennaDetection.detections.map((detection, index) => {
-              const { x, y, width, height } = calculateBoundingBoxPositions(
-                detection.bbox,
-                analysisResult.antennaDetection!.image_size,
-                imageContainerSize
-              );
+          </UploadArea>
+          
+          {preview && (
+            <ImageContainer ref={imageContainerRef}>
+              <StyledImage 
+                ref={imageRef} 
+                src={preview} 
+                alt="Uploaded tower" 
+                onLoad={handleImageLoad}
+              />
               
-              return (
-                <BoundingBox
-                  key={index}
-                  x={x}
-                  y={y}
-                  width={width}
-                  height={height}
-                  classType={detection.class}
-                />
-              );
-            })}
-          </ImageContainer>
-        )}
-        
-        {isLoading && (
-          <LoadingIndicator>
-            <div className="spinner"></div>
-            <p>Analyzing image...</p>
-          </LoadingIndicator>
-        )}
-        
-        {analysisResult?.success && (
-          <>
-            {analysisResult.towerClassification && (
-              <ClassificationResult>
-                <TowerType>
-                  Tower Type: <span>{analysisResult.towerClassification.tower_type}</span>
-                </TowerType>
-              </ClassificationResult>
-            )}
-            
-            {analysisResult.antennaDetection?.detections && 
-             analysisResult.antennaDetection.detections.length > 0 && (
-              <>
-                <ButtonGroup>
-                  <ToggleButton 
-                    onClick={toggleBoundingBoxes}
-                    className={showBoundingBoxes ? 'active' : ''}
-                  >
-                    {showBoundingBoxes ? 'Hide' : 'Show'} Bounding Boxes
-                  </ToggleButton>
-                </ButtonGroup>
+              {showBoundingBoxes && 
+               analysisResult?.antennaDetection?.detections && 
+               analysisResult.antennaDetection.image_size &&
+               analysisResult.antennaDetection.detections.map((detection, index) => {
+                const { x, y, width, height } = calculateBoundingBoxPositions(
+                  detection.bbox,
+                  analysisResult.antennaDetection!.image_size,
+                  imageContainerSize
+                );
                 
-                <DetectionSummary>
-                  <h3>Detection Summary:</h3>
-                  <ul>
-                    {Object.entries(getDetectionCounts()).map(([className, count]) => (
-                      <li key={className}>
-                        <span>{className}</span>
-                        <span className="count">{count}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </DetectionSummary>
-              </>
-            )}
-          </>
-        )}
-        
-        {error && (
-          <ErrorMessage>
-            {error}
-            {!serverOnline && (
-              <div style={{ marginTop: '10px' }}>
-                <RetryButton onClick={handleRetryConnection} disabled={isCheckingStatus}>
-                  {isCheckingStatus ? 'Checking...' : 'Retry Connection'}
-                </RetryButton>
-              </div>
-            )}
-            {errorDetails && (
-              <DetailedError>
-                <summary>Technical Details</summary>
-                <pre>{errorDetails}</pre>
-              </DetailedError>
-            )}
-          </ErrorMessage>
-        )}
-      </Content>
+                return (
+                  <BoundingBox
+                    key={index}
+                    x={x}
+                    y={y}
+                    width={width}
+                    height={height}
+                    classType={detection.class}
+                  />
+                );
+              })}
+            </ImageContainer>
+          )}
+          
+          {isLoading && (
+            <LoadingIndicator>
+              <div className="spinner"></div>
+              <p>Analyzing image...</p>
+            </LoadingIndicator>
+          )}
+          
+          {analysisResult?.success && (
+            <>
+              {analysisResult.towerClassification && (
+                <ClassificationResult>
+                  <TowerType>
+                    Tower Type: <span>{analysisResult.towerClassification.tower_type}</span>
+                  </TowerType>
+                </ClassificationResult>
+              )}
+              
+              {analysisResult.antennaDetection?.detections && 
+               analysisResult.antennaDetection.detections.length > 0 && (
+                <>
+                  <ButtonGroup>
+                    <ToggleButton 
+                      onClick={toggleBoundingBoxes}
+                      className={showBoundingBoxes ? 'active' : ''}
+                    >
+                      {showBoundingBoxes ? 'Hide' : 'Show'} Bounding Boxes
+                    </ToggleButton>
+                  </ButtonGroup>
+                  
+                  <DetectionSummary>
+                    <h3>Detection Summary:</h3>
+                    <ul>
+                      {Object.entries(getDetectionCounts()).map(([className, count]) => (
+                        <li key={className}>
+                          <span>{className}</span>
+                          <span className="count">{count}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </DetectionSummary>
+                </>
+              )}
+            </>
+          )}
+          
+          {error && (
+            <ErrorMessage>
+              {error}
+              {!serverOnline && (
+                <div style={{ marginTop: '10px' }}>
+                  <RetryButton onClick={handleRetryConnection} disabled={isCheckingStatus}>
+                    {isCheckingStatus ? 'Checking...' : 'Retry Connection'}
+                  </RetryButton>
+                </div>
+              )}
+              {errorDetails && (
+                <DetailedError>
+                  <summary>Technical Details</summary>
+                  <pre>{errorDetails}</pre>
+                </DetailedError>
+              )}
+            </ErrorMessage>
+          )}
+        </UploadSection>
+
+        <ModelSection isVisible={showModel}>
+          <ModelContainer>
+            <TowerModel 
+              towerType={analysisResult?.towerClassification?.tower_type}
+            />
+          </ModelContainer>
+        </ModelSection>
+      </SplitLayout>
       
       {serverOnline !== null && (
         <ServerStatus 

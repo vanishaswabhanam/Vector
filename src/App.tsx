@@ -5,6 +5,7 @@ import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
 import MediaUpload from './pages/MediaUpload';
 import Maintenance from './pages/Maintenance';
+import TowerView from './pages/TowerView';
 
 const AppContainer = styled.div`
   min-height: 100vh;
@@ -20,6 +21,7 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/media" element={<MediaUpload />} />
           <Route path="/maintenance" element={<Maintenance />} />
+          <Route path="/tower" element={<TowerView />} />
         </Routes>
       </AppContainer>
     </Router>
