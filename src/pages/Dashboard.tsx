@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import styled from '@emotion/styled';
 import Header from '../components/Header';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -109,12 +110,46 @@ const MarkerLabel = styled.div`
   white-space: nowrap;
 `;
 
+const GraphContainer = styled.div`
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  width: 90%;
+  max-width: 1200px;
+  margin-top: 2rem;
+  padding: 2rem;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+`;
+
+const GraphCard = styled.div`
+  width: calc(50% - 2rem);
+  min-width: 300px;
+  margin: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+
+  h3 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    text-align: center;
+  }
+`;
+
 interface SensorData {
   temperature: number;
   rotation: number;
   sound: number;
   light: number;
+  timestamp?: number;
 }
+
+// Add these type definitions at the top of the file
+type TimeFormatter = (timestamp: number) => string;
+type ValueFormatter = (value: number) => [string, string];
 
 const Dashboard: React.FC = () => {
   const [showSensorData, setShowSensorData] = useState(false);
@@ -125,6 +160,7 @@ const Dashboard: React.FC = () => {
     sound: 0,
     light: 0
   });
+  const [historicalData, setHistoricalData] = useState<SensorData[]>([]);
   
   const sensorDataRef = useRef<HTMLDivElement>(null);
 
@@ -151,6 +187,14 @@ const Dashboard: React.FC = () => {
         const response = await fetch('http://localhost:3001/api/sensor-data');
         const data = await response.json();
         setSensorData(data);
+        
+        // Add timestamp and update historical data
+        const timestampedData = { ...data, timestamp: Date.now() };
+        setHistoricalData(prev => {
+          const newData = [...prev, timestampedData];
+          // Keep last 30 readings
+          return newData.slice(-30);
+        });
       } catch (error) {
         console.error('Failed to fetch sensor data:', error);
       }
@@ -238,6 +282,112 @@ const Dashboard: React.FC = () => {
           <p>{sensorData.rotation}°</p>
         </SensorCard>
       </SensorDataContainer>
+
+      <GraphContainer>
+        <GraphCard>
+          <h3>Temperature History</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={historicalData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="timestamp" 
+                tickFormatter={(timestamp: number) => new Date(timestamp).toLocaleTimeString()}
+                interval="preserveStartEnd"
+              />
+              <YAxis domain={['auto', 'auto']} />
+              <Tooltip 
+                labelFormatter={(timestamp: number) => new Date(timestamp).toLocaleTimeString()}
+                formatter={(value: number) => [`${value.toFixed(2)}°C`, 'Temperature']}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="temperature" 
+                stroke="#2c5282" 
+                dot={false} 
+                strokeWidth={2}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </GraphCard>
+
+        <GraphCard>
+          <h3>Light Level History</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={historicalData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="timestamp" 
+                tickFormatter={(timestamp: number) => new Date(timestamp).toLocaleTimeString()}
+                interval="preserveStartEnd"
+              />
+              <YAxis domain={['auto', 'auto']} />
+              <Tooltip 
+                labelFormatter={(timestamp: number) => new Date(timestamp).toLocaleTimeString()}
+                formatter={(value: number) => [`${value} lux`, 'Light']}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="light" 
+                stroke="#ecc94b" 
+                dot={false} 
+                strokeWidth={2}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </GraphCard>
+
+        <GraphCard>
+          <h3>Sound Level History</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={historicalData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="timestamp" 
+                tickFormatter={(timestamp: number) => new Date(timestamp).toLocaleTimeString()}
+                interval="preserveStartEnd"
+              />
+              <YAxis domain={['auto', 'auto']} />
+              <Tooltip 
+                labelFormatter={(timestamp: number) => new Date(timestamp).toLocaleTimeString()}
+                formatter={(value: number) => [`${value} dB`, 'Sound']}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="sound" 
+                stroke="#805ad5" 
+                dot={false} 
+                strokeWidth={2}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </GraphCard>
+
+        <GraphCard>
+          <h3>Rotation History</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={historicalData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="timestamp" 
+                tickFormatter={(timestamp: number) => new Date(timestamp).toLocaleTimeString()}
+                interval="preserveStartEnd"
+              />
+              <YAxis domain={['auto', 'auto']} />
+              <Tooltip 
+                labelFormatter={(timestamp: number) => new Date(timestamp).toLocaleTimeString()}
+                formatter={(value: number) => [`${value}°`, 'Rotation']}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="rotation" 
+                stroke="#e53e3e" 
+                dot={false} 
+                strokeWidth={2}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </GraphCard>
+      </GraphContainer>
     </DashboardContainer>
   );
 };
