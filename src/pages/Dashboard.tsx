@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import styled from '@emotion/styled';
 import Header from '../components/Header';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
@@ -13,15 +13,22 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
 });
 
-// Sample sensor data
-const sensorData = [
-  { id: 9361, bands: 5, position: [47.7, -122.3], reading: { temp: 24, light: 800, sound: 45, rotation: 180 } },
-  { id: 107242, bands: 77, position: [41.8, -93.6], reading: { temp: 26, light: 950, sound: 55, rotation: 90 } },
-  { id: 119392, bands: 5, position: [37.7, -97.3], reading: { temp: 29, light: 1050, sound: 60, rotation: 270 } },
-  { id: 117150, bands: 77, position: [37.7, -95.7], reading: { temp: 23, light: 750, sound: 40, rotation: 45 } },
-  { id: 127097, bands: 77, position: [34.0, -118.2], reading: { temp: 21, light: 600, sound: 50, rotation: 120 } },
-  { id: 147636, bands: 77, position: [35.2, -106.6], reading: { temp: 28, light: 890, sound: 35, rotation: 210 } },
-  { id: 42751, bands: 77, position: [39.1, -94.6], reading: { temp: 22, light: 720, sound: 48, rotation: 135 } },
+// Thresholds for alerts
+const THRESHOLDS = {
+  temperature: { min: 20, max: 30 },
+  sound: { min: 0, max: 200 },
+  light: { min: 30, max: 80 }
+};
+
+// Sample sensor locations (we'll keep these static)
+const sensorLocations = [
+  { id: 9361, bands: 5, position: [47.7, -122.3] },
+  { id: 107242, bands: 77, position: [41.8, -93.6] },
+  { id: 119392, bands: 5, position: [37.7, -97.3] },
+  { id: 117150, bands: 77, position: [37.7, -95.7] },
+  { id: 127097, bands: 77, position: [34.0, -118.2] },
+  { id: 147636, bands: 77, position: [35.2, -106.6] },
+  { id: 42751, bands: 77, position: [39.1, -94.6] },
 ];
 
 const DashboardContainer = styled.div`
@@ -49,6 +56,7 @@ const MapWrapper = styled.div`
 const SensorDataContainer = styled.div<{ isVisible: boolean }>`
   display: flex;
   justify-content: space-around;
+  flex-wrap: wrap;
   width: 90%;
   max-width: 1200px;
   margin-top: 2rem;
@@ -61,9 +69,16 @@ const SensorDataContainer = styled.div<{ isVisible: boolean }>`
   transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
 `;
 
-const SensorCard = styled.div`
+const SensorCard = styled.div<{ isAlert?: boolean }>`
   text-align: center;
-  padding: 1rem;
+  padding: 1.5rem;
+  background: ${props => props.isAlert ? '#fff3f3' : 'white'};
+  border-radius: 8px;
+  margin: 0.5rem;
+  min-width: 200px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border: 2px solid ${props => props.isAlert ? '#ff4444' : 'transparent'};
+  transition: all 0.3s ease;
   
   h3 {
     margin: 0 0 0.5rem 0;
@@ -73,9 +88,15 @@ const SensorCard = styled.div`
   p {
     font-size: 1.5rem;
     font-weight: bold;
-    color: #2c5282;
+    color: ${props => props.isAlert ? '#ff4444' : '#2c5282'};
     margin: 0;
   }
+`;
+
+const AlertMessage = styled.div`
+  font-size: 0.875rem;
+  color: #ff4444;
+  margin-top: 0.5rem;
 `;
 
 const MarkerLabel = styled.div`
@@ -88,13 +109,64 @@ const MarkerLabel = styled.div`
   white-space: nowrap;
 `;
 
+interface SensorData {
+  temperature: number;
+  rotation: number;
+  sound: number;
+  light: number;
+}
+
 const Dashboard: React.FC = () => {
   const [showSensorData, setShowSensorData] = useState(false);
-  const [selectedSensor, setSelectedSensor] = useState(sensorData[0]);
+  const [selectedLocation, setSelectedLocation] = useState(sensorLocations[0]);
+  const [sensorData, setSensorData] = useState<SensorData>({
+    temperature: 0,
+    rotation: 0,
+    sound: 0,
+    light: 0
+  });
+  
   const sensorDataRef = useRef<HTMLDivElement>(null);
 
-  const handleSensorSelect = (sensor: typeof sensorData[0]) => {
-    setSelectedSensor(sensor);
+  const checkThreshold = (value: number, type: 'temperature' | 'sound' | 'light') => {
+    const threshold = THRESHOLDS[type];
+    return value < threshold.min || value > threshold.max;
+  };
+
+  const getAlertMessage = (value: number, type: 'temperature' | 'sound' | 'light') => {
+    const threshold = THRESHOLDS[type];
+    if (value < threshold.min) {
+      return `${type.charAt(0).toUpperCase() + type.slice(1)} is too low`;
+    }
+    if (value > threshold.max) {
+      return `${type.charAt(0).toUpperCase() + type.slice(1)} is too high`;
+    }
+    return '';
+  };
+
+  // Fetch sensor data periodically
+  useEffect(() => {
+    const fetchSensorData = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/sensor-data');
+        const data = await response.json();
+        setSensorData(data);
+      } catch (error) {
+        console.error('Failed to fetch sensor data:', error);
+      }
+    };
+
+    // Fetch immediately
+    fetchSensorData();
+
+    // Then fetch every second
+    const interval = setInterval(fetchSensorData, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleLocationSelect = (location: typeof sensorLocations[0]) => {
+    setSelectedLocation(location);
     setShowSensorData(true);
     setTimeout(() => {
       sensorDataRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -114,18 +186,18 @@ const Dashboard: React.FC = () => {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          {sensorData.map((sensor) => (
+          {sensorLocations.map((location) => (
             <Marker 
-              key={sensor.id}
-              position={sensor.position as [number, number]}
+              key={location.id}
+              position={location.position as [number, number]}
               eventHandlers={{
-                click: () => handleSensorSelect(sensor),
+                click: () => handleLocationSelect(location),
               }}
             >
               <Popup>
                 <MarkerLabel>
-                  {sensor.id}<br />
-                  Bands {sensor.bands}
+                  {location.id}<br />
+                  Bands {location.bands}
                 </MarkerLabel>
               </Popup>
             </Marker>
@@ -134,21 +206,36 @@ const Dashboard: React.FC = () => {
       </MapWrapper>
       
       <SensorDataContainer ref={sensorDataRef} isVisible={showSensorData}>
-        <SensorCard>
+        <SensorCard isAlert={checkThreshold(sensorData.temperature, 'temperature')}>
           <h3>Temperature</h3>
-          <p>{selectedSensor.reading.temp}°C</p>
+          <p>{sensorData.temperature.toFixed(2)}°C</p>
+          {checkThreshold(sensorData.temperature, 'temperature') && (
+            <AlertMessage>
+              {getAlertMessage(sensorData.temperature, 'temperature')}
+            </AlertMessage>
+          )}
         </SensorCard>
-        <SensorCard>
+        <SensorCard isAlert={checkThreshold(sensorData.light, 'light')}>
           <h3>Light</h3>
-          <p>{selectedSensor.reading.light} lux</p>
+          <p>{sensorData.light} lux</p>
+          {checkThreshold(sensorData.light, 'light') && (
+            <AlertMessage>
+              {getAlertMessage(sensorData.light, 'light')}
+            </AlertMessage>
+          )}
         </SensorCard>
-        <SensorCard>
+        <SensorCard isAlert={checkThreshold(sensorData.sound, 'sound')}>
           <h3>Sound</h3>
-          <p>{selectedSensor.reading.sound} dB</p>
+          <p>{sensorData.sound} dB</p>
+          {checkThreshold(sensorData.sound, 'sound') && (
+            <AlertMessage>
+              {getAlertMessage(sensorData.sound, 'sound')}
+            </AlertMessage>
+          )}
         </SensorCard>
         <SensorCard>
           <h3>Rotation</h3>
-          <p>{selectedSensor.reading.rotation}°</p>
+          <p>{sensorData.rotation}°</p>
         </SensorCard>
       </SensorDataContainer>
     </DashboardContainer>
