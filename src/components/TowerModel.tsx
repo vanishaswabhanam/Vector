@@ -6,6 +6,8 @@ const ModelFrame = styled.iframe`
   height: 100%;
   border: none;
   border-radius: 8px;
+  min-height: 500px; /* Ensure minimum height */
+  background: #f5f5f5;
 `;
 
 interface TowerModelProps {
@@ -27,6 +29,25 @@ const TowerModel: React.FC<TowerModelProps> = ({ towerType }) => {
       }, '*');
     }
   }, [towerType]);
+
+  // Add resize handler
+  useEffect(() => {
+    const handleResize = () => {
+      if (iframeRef.current?.contentWindow) {
+        iframeRef.current.contentWindow.postMessage({
+          type: 'resize',
+          width: iframeRef.current.clientWidth,
+          height: iframeRef.current.clientHeight
+        }, '*');
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    // Initial resize
+    handleResize();
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <ModelFrame
